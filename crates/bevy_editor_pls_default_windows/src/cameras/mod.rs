@@ -1,6 +1,8 @@
 pub mod camera_2d_panzoom;
 pub mod camera_3d_free;
 pub mod camera_3d_panorbit;
+pub mod camera_window_ext;
+
 use crate::scenes::NotInScene;
 
 use bevy::render::camera::RenderTarget;
