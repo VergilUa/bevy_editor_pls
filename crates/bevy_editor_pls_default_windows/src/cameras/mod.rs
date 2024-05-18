@@ -441,7 +441,12 @@ fn focus_selected(
             RADIUS_MULTIPLIER
         };
 
-        let (mut camera_tf, pan_orbit_cam, ortho) = active_cam.single_mut();
+        let Ok((mut camera_tf, pan_orbit_cam, ortho)) = active_cam.get_single_mut() else {
+            let camera_count = active_cam.iter().count();
+
+            info!("Cannot focus. Select camera first. Total active cameras: {:?}", camera_count);
+            return;
+        };
 
         if let Some(mut ortho) = ortho {
             camera_tf.translation.x = focus_loc.x;
