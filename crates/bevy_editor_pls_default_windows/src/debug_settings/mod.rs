@@ -183,9 +183,27 @@ fn debug_ui_debugdump(world: &mut World, state: &mut DebugSettingsWindowState, u
     };
 
     ui.vertical(|ui| {
+        if ui.button("Open `First` schedule").clicked() {
+            let schedule_graph = world.get_resource::<debugdump::DotGraphs>().unwrap();
+            if let Err(e) = open_dot(&schedule_graph.first_schedule, "schedule_first_update") {
+                state.open_debugdump_status = Some(e);
+            }
+        }
+        if ui.button("Open `PreUpdate` schedule").clicked() {
+            let schedule_graph = world.get_resource::<debugdump::DotGraphs>().unwrap();
+            if let Err(e) = open_dot(&schedule_graph.pre_update_schedule, "schedule_pre_update") {
+                state.open_debugdump_status = Some(e);
+            }
+        }
         if ui.button("Open `Update` schedule").clicked() {
             let schedule_graph = world.get_resource::<debugdump::DotGraphs>().unwrap();
-            if let Err(e) = open_dot(&schedule_graph.update_schedule, "schedule_main") {
+            if let Err(e) = open_dot(&schedule_graph.update_schedule, "schedule_update") {
+                state.open_debugdump_status = Some(e);
+            }
+        }
+        if ui.button("Open `PostUpdate` schedule").clicked() {
+            let schedule_graph = world.get_resource::<debugdump::DotGraphs>().unwrap();
+            if let Err(e) = open_dot(&schedule_graph.post_update_schedule, "schedule_post_update") {
                 state.open_debugdump_status = Some(e);
             }
         }

@@ -10,7 +10,10 @@ use std::{
 
 #[derive(Resource)]
 pub struct DotGraphs {
+    pub first_schedule: Option<String>,
+    pub pre_update_schedule: Option<String>,
     pub update_schedule: Option<String>,
+    pub post_update_schedule: Option<String>,
     pub fixed_update_schedule: Option<String>,
     pub render_main_schedule: Option<String>,
     pub render_extract_schedule: Option<String>,
@@ -34,7 +37,19 @@ pub fn setup(app: &mut App) {
     };
     let rendergraph_settings = render_graph::settings::Settings::default();
 
+    let first_schedule = app.get_schedule(First).map(|schedule| {
+        schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
+    });
+
+    let pre_update_schedule = app.get_schedule(PreUpdate).map(|schedule| {
+        schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
+    });
+
     let update_schedule = app.get_schedule(Update).map(|schedule| {
+        schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
+    });
+
+    let post_update_schedule = app.get_schedule(PostUpdate).map(|schedule| {
         schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
     });
 
@@ -52,7 +67,10 @@ pub fn setup(app: &mut App) {
     let render_graph = render_graph::render_graph_dot(render_graph, &rendergraph_settings);
 
     app.insert_resource(DotGraphs {
+        first_schedule,
+        pre_update_schedule,
         update_schedule,
+        post_update_schedule,
         fixed_update_schedule,
         render_main_schedule,
         render_extract_schedule,
