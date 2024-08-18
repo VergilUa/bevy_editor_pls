@@ -38,11 +38,11 @@ pub fn setup(app: &mut App) {
     let rendergraph_settings = render_graph::settings::Settings::default();
 
     let first_schedule = app.get_schedule(First).map(|schedule| {
-        schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
+        schedule_graph::schedule_graph_dot(schedule, &app.world(), &schedule_settings)
     });
 
     let pre_update_schedule = app.get_schedule(PreUpdate).map(|schedule| {
-        schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
+        schedule_graph::schedule_graph_dot(schedule, &app.world(), &schedule_settings)
     });
 
     let update_schedule = app.get_schedule(Update).map(|schedule| {
@@ -50,7 +50,7 @@ pub fn setup(app: &mut App) {
     });
 
     let post_update_schedule = app.get_schedule(PostUpdate).map(|schedule| {
-        schedule_graph::schedule_graph_dot(schedule, &app.world, &schedule_settings)
+        schedule_graph::schedule_graph_dot(schedule, &app.world(), &schedule_settings)
     });
 
     let fixed_update_schedule = app.get_schedule(FixedUpdate).map(|schedule| {
