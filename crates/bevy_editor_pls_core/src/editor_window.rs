@@ -2,7 +2,7 @@ use bevy::prelude::{App, World};
 use bevy::utils::HashMap;
 use bevy_inspector_egui::egui;
 use std::any::{Any, TypeId};
-
+use egui_dock::egui::Rect;
 use crate::editor::EditorWindowState;
 
 /// An editor window type
@@ -105,6 +105,7 @@ impl EditorWindowContext<'_> {
                 window: window_id,
                 id: floating_window_id,
                 initial_position: None,
+                current_rect: Rect::ZERO,
             });
     }
 }

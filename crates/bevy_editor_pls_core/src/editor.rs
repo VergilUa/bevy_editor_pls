@@ -3,7 +3,9 @@ use std::any::{Any, TypeId};
 use bevy::window::WindowMode;
 use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
+use bevy_inspector_egui::egui::Context;
 use egui_dock::{NodeIndex, SurfaceIndex, TabBarStyle, TabIndex};
+use egui_dock::egui::PointerButton;
 use indexmap::IndexMap;
 
 use crate::editor_window::{EditorWindow, EditorWindowContext};
@@ -35,7 +37,17 @@ pub struct Editor {
 
     windows: IndexMap<TypeId, EditorWindowData>,
     window_states: HashMap<TypeId, EditorWindowState>,
+
+    pub pointer_state: EditorPointerState,
 }
+
+/// Current state of the pointer used inside editor window
+#[derive(Default)]
+pub struct EditorPointerState {
+    pub press_active: bool,
+    pub press_start_in_viewport: bool
+}
+
 impl Editor {
     pub fn new(on_window: Entity, always_active: bool) -> Self {
         Editor {
@@ -50,6 +62,7 @@ impl Editor {
 
             windows: IndexMap::default(),
             window_states: HashMap::default(),
+            pointer_state: EditorPointerState::default(),
         }
     }
 
@@ -206,6 +219,7 @@ pub(crate) struct FloatingWindow {
     pub(crate) window: TypeId,
     pub(crate) id: u32,
     pub(crate) initial_position: Option<egui::Pos2>,
+    pub current_rect: egui::Rect
 }
 
 impl EditorInternalState {
@@ -336,8 +350,9 @@ impl Editor {
 
         let pointer_pos = ctx.input(|input| input.pointer.interact_pos());
         self.pointer_used = pointer_pos.map_or(false, |pos| !self.is_in_viewport(pos));
-
         self.editor_floating_windows(world, ctx, internal_state);
+
+        self.setup_input_state(ctx, &internal_state);
 
         self.listening_for_text = ctx.wants_keyboard_input();
 
@@ -351,6 +366,51 @@ impl Editor {
                 });
             }
             (Some(_), true) => {}
+        }
+    }
+
+    fn setup_input_state(&mut self, ctx: &Context, internal_state: &EditorInternalState) {
+        let is_pointer_pressed = ctx.input(|input| input.pointer.button_pressed(PointerButton::Primary));
+        let is_pointer_held = ctx.input(|input| input.pointer.button_down(PointerButton::Primary));
+
+        let pointer_state = &mut self.pointer_state;
+        pointer_state.press_active = is_pointer_held;
+
+        self.setup_input_viewport_state(ctx, is_pointer_pressed, is_pointer_held, internal_state);
+    }
+
+    fn setup_input_viewport_state(&mut self,
+                                  ctx: &Context,
+                                  is_pointer_pressed: bool,
+                                  is_pointer_held: bool,
+                                  internal_state: &EditorInternalState
+    ) {
+        // Check if pointer is in viewport, in order to determine if
+        // viewport should be altered during rendering
+        if is_pointer_pressed {
+            let pointer_pos = ctx.input(|input| input.pointer.interact_pos());
+
+            // Resolve clicks on top of floating windows as non-viewport ones
+            if let Some(position) = pointer_pos {
+                let windows = &internal_state.floating_windows;
+
+                for window in windows {
+                    let rect = window.current_rect;
+
+                    if rect.contains(position) {
+                        self.pointer_state.press_start_in_viewport = false;
+                        return;
+                    }
+                }
+            }
+
+            self.pointer_state.press_start_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
+            return;
+        }
+
+        // Button has been released -> no need to perform actions in this case
+        if !is_pointer_held {
+            self.pointer_state.press_start_in_viewport = false;
         }
     }
 
@@ -425,6 +485,7 @@ impl Editor {
                     window,
                     id,
                     initial_position: None,
+                    current_rect: egui::Rect::ZERO  // Read later on
                 });
             }
 
@@ -439,9 +500,9 @@ impl Editor {
         internal_state: &mut EditorInternalState,
     ) {
         let mut close_floating_windows = Vec::new();
-        let floating_windows = internal_state.floating_windows.clone();
+        let mut floating_windows = internal_state.floating_windows.clone();
 
-        for (i, floating_window) in floating_windows.into_iter().enumerate() {
+        for (i, floating_window) in floating_windows.iter_mut().enumerate() {
             let id = egui::Id::new(floating_window.id);
             let title = self.windows[&floating_window.window].name;
 
@@ -455,19 +516,31 @@ impl Editor {
             if let Some(initial_position) = floating_window.initial_position {
                 window = window.default_pos(initial_position - egui::Vec2::new(10.0, 10.0))
             }
-            window.show(ctx, |ui| {
+
+            let opt_response = window.show(ctx, |ui| {
                 self.editor_window_inner(world, internal_state, floating_window.window, ui);
                 let desired_size = (ui.available_size() - (5.0, 5.0).into()).max((0.0, 0.0).into());
                 ui.allocate_space(desired_size);
             });
+
+            if let Some(response) = opt_response {
+                floating_window.current_rect = response.response.rect;
+            }
 
             if !open {
                 close_floating_windows.push(i);
             }
         }
 
+        let original_windows = &mut internal_state.floating_windows;
+
+        // Update read values from the floating window copy
+        for (i, window) in original_windows.into_iter().enumerate() {
+            window.current_rect = floating_windows[i].current_rect;
+        }
+
         for &to_remove in close_floating_windows.iter().rev() {
-            let _floating_window = internal_state.floating_windows.swap_remove(to_remove);
+            let _floating_window = original_windows.swap_remove(to_remove);
         }
     }
 

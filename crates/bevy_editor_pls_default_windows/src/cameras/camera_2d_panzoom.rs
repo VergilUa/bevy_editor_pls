@@ -67,6 +67,12 @@ fn camera_movement(
 
     let delta = Vec2::new(delta.x, -delta.y);
 
+    // Ignore non-viewport interactions
+    if !editor.pointer_state.press_start_in_viewport {
+        *last_pos = Some(current_pos);
+        return;
+    }
+
     for (cam, mut transform, projection) in query.iter_mut() {
         if !cam.enabled {
             continue;
