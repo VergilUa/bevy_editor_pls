@@ -212,6 +212,19 @@ impl EditorInternalState {
         self.state
             .split((SurfaceIndex::main(), parent), split, fraction, node)
     }
+
+    /// Determines if floating window of type ['W'] was added prior
+    pub fn has_floating_window<W: 'static>(&self) -> bool {
+        let floating_windows = &self.floating_windows;
+
+        for window in floating_windows.iter() {
+            if window.window == TypeId::of::<W>() {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 #[derive(Clone)]
