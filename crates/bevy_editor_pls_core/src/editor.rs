@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use bevy::window::WindowMode;
 use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
-use bevy_inspector_egui::egui::Context;
+use bevy_inspector_egui::egui::{Context, Ui};
 use egui_dock::{NodeIndex, SurfaceIndex, TabBarStyle, TabIndex};
 use egui_dock::egui::PointerButton;
 use indexmap::IndexMap;
@@ -121,6 +121,9 @@ struct EditorWindowData {
     name: &'static str,
     ui_fn: UiFn,
     menu_ui_fn: UiFn,
+    menu_bar_ui_fn: UiFn,
+    /// Ui function execution order among other [`EditorWindow`]s
+    menu_bar_order: usize,
     viewport_toolbar_ui_fn: UiFn,
     viewport_ui_fn: UiFn,
     default_size: (f32, f32),
@@ -260,6 +263,9 @@ fn ui_fn<W: EditorWindow>(world: &mut World, cx: EditorWindowContext, ui: &mut e
 fn menu_ui_fn<W: EditorWindow>(world: &mut World, cx: EditorWindowContext, ui: &mut egui::Ui) {
     W::menu_ui(world, cx, ui);
 }
+fn menu_bar_ui_fn<W: EditorWindow>(world: &mut World, cx: EditorWindowContext, ui: &mut egui::Ui) {
+    W::menu_bar_ui(world, cx, ui);
+}
 fn viewport_toolbar_ui_fn<W: EditorWindow>(
     world: &mut World,
     cx: EditorWindowContext,
@@ -273,14 +279,17 @@ fn viewport_ui_fn<W: EditorWindow>(world: &mut World, cx: EditorWindowContext, u
 
 impl Editor {
     pub fn add_window<W: EditorWindow>(&mut self) {
-        let type_id = std::any::TypeId::of::<W>();
+        let type_id = TypeId::of::<W>();
         let ui_fn = Box::new(ui_fn::<W>);
         let menu_ui_fn = Box::new(menu_ui_fn::<W>);
+        let menu_bar_ui_fn = Box::new(menu_bar_ui_fn::<W>);
         let viewport_toolbar_ui_fn = Box::new(viewport_toolbar_ui_fn::<W>);
         let viewport_ui_fn = Box::new(viewport_ui_fn::<W>);
         let data = EditorWindowData {
             ui_fn,
             menu_ui_fn,
+            menu_bar_ui_fn,
+            menu_bar_order: W::menu_bar_order(),
             viewport_toolbar_ui_fn,
             viewport_ui_fn,
             name: W::NAME,
@@ -463,6 +472,8 @@ impl Editor {
                         (window.menu_ui_fn)(world, cx, ui);
                     }
                 });
+
+                self.draw_window_menu_items(world, internal_state, ui);
             })
             .response;
             // .interact(egui::Sense::click());
@@ -479,6 +490,35 @@ impl Editor {
                 }
             }
         });
+    }
+
+    /// Performs drawing of the menu bar Ui per [`EditorWindow`] based on
+    /// specified order of items
+    fn draw_window_menu_items(&mut self,
+                              world: &mut World,
+                              internal_state: &mut EditorInternalState,
+                              ui: &mut Ui,
+    ) {
+        let windows = &self.windows;
+
+        // Collect and sort indices based on the window menu bar order
+        let mut sorted_indices = windows
+            .iter()
+            .enumerate()
+            .map(|(i, (_, window_data))| (i, window_data.menu_bar_order))
+            .collect::<Vec<_>>();
+
+        sorted_indices.sort_by_key(|&(_, order)| order);
+
+        for (window_index, _) in sorted_indices {
+            let cx = EditorWindowContext {
+                window_states: &mut self.window_states,
+                internal_state,
+            };
+
+            let window = &windows[window_index];
+            (window.menu_bar_ui_fn)(world, cx, ui);
+        }
     }
 
     fn editor_window_inner(

@@ -23,6 +23,20 @@ pub trait EditorWindow: 'static {
             ui.close_menu();
         }
     }
+
+    /// Ui drawn on the menu bar at the top. Does nothing by default
+    #[allow(unused_mut)]
+    fn menu_bar_ui(world: &mut World, mut cx: EditorWindowContext, ui: &mut egui::Ui) {
+        let _ = world;
+        let _ = cx;
+        let _ = ui;
+    }
+
+    /// Order among other windows / menu bar items for sorting
+    fn menu_bar_order() -> usize {
+        0
+    }
+
     /// Ui shown in the viewport toolbar.
     fn viewport_toolbar_ui(world: &mut World, cx: EditorWindowContext, ui: &mut egui::Ui) {
         let _ = (world, cx, ui);
