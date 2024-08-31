@@ -1,5 +1,5 @@
 use std::any::{Any, TypeId};
-
+use std::collections::HashSet;
 use bevy::window::WindowMode;
 use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
@@ -132,6 +132,9 @@ pub struct EditorInternalState {
     pub(crate) floating_windows: Vec<FloatingWindow>,
 
     next_floating_window_id: u32,
+
+    /// Contains all closed floating windows during current redraw
+    closed_floating_windows: HashSet<TypeId>
 }
 
 impl Default for EditorInternalState {
@@ -140,6 +143,7 @@ impl Default for EditorInternalState {
             state: egui_dock::DockState::new(vec![TreeTab::GameView]),
             floating_windows: Default::default(),
             next_floating_window_id: Default::default(),
+            closed_floating_windows: Default::default(),
         }
     }
 }
@@ -224,6 +228,13 @@ impl EditorInternalState {
         }
 
         false
+    }
+
+    /// Determines if floating window of type [`W`] was closed during last
+    /// redraw / frame
+    pub fn closed_floating_window<W: 'static>(&self) -> bool {
+        let test_type = TypeId::of::<W>();
+        self.closed_floating_windows.contains(&test_type)
     }
 }
 
@@ -509,43 +520,46 @@ impl Editor {
     fn editor_floating_windows(
         &mut self,
         world: &mut World,
-        ctx: &egui::Context,
-        internal_state: &mut EditorInternalState,
+        ctx: &Context,
+        state: &mut EditorInternalState,
     ) {
         let mut close_floating_windows = Vec::new();
-        let mut floating_windows = internal_state.floating_windows.clone();
+        let mut floating_windows = state.floating_windows.clone();
 
-        for (i, floating_window) in floating_windows.iter_mut().enumerate() {
-            let id = egui::Id::new(floating_window.id);
-            let title = self.windows[&floating_window.window].name;
+        state.closed_floating_windows.clear();
+
+        for (i, fl_window) in floating_windows.iter_mut().enumerate() {
+            let id = egui::Id::new(fl_window.id);
+            let title = self.windows[&fl_window.window].name;
 
             let mut open = true;
-            let default_size = self.windows[&floating_window.window].default_size;
+            let default_size = self.windows[&fl_window.window].default_size;
             let mut window = egui::Window::new(title)
                 .id(id)
                 .open(&mut open)
                 .resizable(true)
                 .default_size(default_size);
-            if let Some(initial_position) = floating_window.initial_position {
+            if let Some(initial_position) = fl_window.initial_position {
                 window = window.default_pos(initial_position - egui::Vec2::new(10.0, 10.0))
             }
 
             let opt_response = window.show(ctx, |ui| {
-                self.editor_window_inner(world, internal_state, floating_window.window, ui);
+                self.editor_window_inner(world, state, fl_window.window, ui);
                 let desired_size = (ui.available_size() - (5.0, 5.0).into()).max((0.0, 0.0).into());
                 ui.allocate_space(desired_size);
             });
 
             if let Some(response) = opt_response {
-                floating_window.current_rect = response.response.rect;
+                fl_window.current_rect = response.response.rect;
             }
 
             if !open {
                 close_floating_windows.push(i);
+                state.closed_floating_windows.insert(fl_window.window);
             }
         }
 
-        let original_windows = &mut internal_state.floating_windows;
+        let original_windows = &mut state.floating_windows;
 
         // Update read values from the floating window copy
         for (i, window) in original_windows.into_iter().enumerate() {
@@ -553,7 +567,7 @@ impl Editor {
         }
 
         for &to_remove in close_floating_windows.iter().rev() {
-            let _floating_window = original_windows.swap_remove(to_remove);
+            original_windows.swap_remove(to_remove);
         }
     }
 
