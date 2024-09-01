@@ -598,7 +598,10 @@ impl Editor {
             });
 
             if let Some(response) = opt_response {
-                fl_window.current_rect = response.response.rect;
+                let mut result_rect = response.response.rect;
+                result_rect = result_rect.expand(Editor::WINDOW_DRAG_EDGE_SIZE);
+
+                fl_window.current_rect = result_rect;
             }
 
             if !open {
