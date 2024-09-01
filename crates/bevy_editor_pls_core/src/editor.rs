@@ -5,7 +5,6 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
 use bevy_inspector_egui::egui::{Context, Ui};
 use egui_dock::{NodeIndex, SurfaceIndex, TabBarStyle, TabIndex};
-use egui_dock::egui::{PointerButton};
 use indexmap::IndexMap;
 use crate::editor_inputs::EditorPointerState;
 use crate::editor_window::{EditorWindow, EditorWindowContext};
@@ -406,11 +405,8 @@ impl Editor {
     }
 
     fn setup_input_state(&mut self, ctx: &Context, internal_state: &EditorInternalState) {
-        let is_pointer_pressed = ctx.input(|input| input.pointer.button_pressed(PointerButton::Primary));
-        let is_pointer_held = ctx.input(|input| input.pointer.button_down(PointerButton::Primary));
-
-        let pointer_state = &mut self.pointer_state;
-        pointer_state.press_active = is_pointer_held;
+        let is_pointer_pressed = ctx.input(|input| input.pointer.any_pressed());
+        let is_pointer_held = ctx.input(|input| input.pointer.any_pressed());
 
         self.setup_input_viewport_state(ctx, is_pointer_pressed, is_pointer_held, internal_state);
     }

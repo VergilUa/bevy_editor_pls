@@ -3,7 +3,6 @@ use egui_dock::egui::Pos2;
 /// Current state of the pointer used inside editor window
 #[derive(Default)]
 pub struct EditorPointerState {
-	pub press_active: bool,
 	pub press_start_in_viewport: bool,
 
 	/// Position of the cursor inside the viewport / game view
