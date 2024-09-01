@@ -421,11 +421,18 @@ impl Editor {
                                   is_pointer_held: bool,
                                   internal_state: &EditorInternalState
     ) {
+        let pointer_pos = ctx.input(|input| input.pointer.interact_pos());
+        let is_pointer_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
+
+        // Discard previously read position.
+        // Otherwise, will register outside viewport
+        if !is_pointer_in_viewport {
+            self.pointer_state.viewport_pointer_pos = None;
+        }
+
         // Check if pointer is in viewport, in order to determine if
         // viewport should be altered during rendering
         if is_pointer_pressed {
-            let pointer_pos = ctx.input(|input| input.pointer.interact_pos());
-
             // Resolve clicks on top of floating windows as non-viewport ones
             if let Some(position) = pointer_pos {
                 let windows = &internal_state.floating_windows;
@@ -440,15 +447,7 @@ impl Editor {
                 }
             }
 
-            let is_pointer_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
             self.pointer_state.press_start_in_viewport = is_pointer_in_viewport;
-
-            // Discard previously read position,
-            // otherwise will register outside viewport
-            if !is_pointer_in_viewport {
-               self.pointer_state.viewport_pointer_pos = None;
-            }
-
             return;
         }
 
