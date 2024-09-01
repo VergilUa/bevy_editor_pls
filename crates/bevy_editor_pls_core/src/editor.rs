@@ -114,6 +114,16 @@ impl Editor {
                 Some(ActiveEditorInteraction::Viewport)
             )
     }
+
+    pub(crate) fn extract_viewport_pointer_pos(&mut self, ui: &mut Ui){
+        let Some(cursor_pos) = ui.input(|input| input.pointer.latest_pos()) else {
+            self.pointer_state.viewport_pointer_pos = None;
+            return;
+        };
+
+        let local_cursor_pos = (cursor_pos - ui.min_rect().min).to_pos2();
+        self.pointer_state.viewport_pointer_pos = Some(local_cursor_pos);
+    }
 }
 
 pub(crate) type UiFn =
@@ -422,32 +432,34 @@ impl Editor {
                                   internal_state: &EditorInternalState
     ) {
         let pointer_pos = ctx.input(|input| input.pointer.interact_pos());
-        let is_pointer_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
+        let pointer_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
+
+        let mut pointer_inside_floating_window = false;
+
+        // Resolve clicks on top of floating windows as non-viewport ones
+        if let Some(position) = pointer_pos {
+            let windows = &internal_state.floating_windows;
+
+            for window in windows {
+                let rect = window.current_rect;
+
+                if rect.contains(position) {
+                    pointer_inside_floating_window = true;
+                    break;
+                }
+            }
+        }
 
         // Discard previously read position.
         // Otherwise, will register outside viewport
-        if !is_pointer_in_viewport {
+        if !pointer_in_viewport || pointer_inside_floating_window {
             self.pointer_state.viewport_pointer_pos = None;
         }
 
         // Check if pointer is in viewport, in order to determine if
         // viewport should be altered during rendering
         if is_pointer_pressed {
-            // Resolve clicks on top of floating windows as non-viewport ones
-            if let Some(position) = pointer_pos {
-                let windows = &internal_state.floating_windows;
-
-                for window in windows {
-                    let rect = window.current_rect;
-
-                    if rect.contains(position) {
-                        self.pointer_state.press_start_in_viewport = false;
-                        return;
-                    }
-                }
-            }
-
-            self.pointer_state.press_start_in_viewport = is_pointer_in_viewport;
+            self.pointer_state.press_start_in_viewport = pointer_in_viewport && !pointer_inside_floating_window;
             return;
         }
 
@@ -677,7 +689,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                 });
 
                 self.editor.viewport = viewport;
-                self.editor.pointer_state.viewport_pointer_pos = ui.input(|input| input.pointer.latest_pos());
+                self.editor.extract_viewport_pointer_pos(ui);
 
                 self.editor
                     .editor_viewport_ui(self.world, ui, self.internal_state);
