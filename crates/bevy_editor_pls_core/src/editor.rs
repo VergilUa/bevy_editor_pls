@@ -440,7 +440,15 @@ impl Editor {
                 }
             }
 
-            self.pointer_state.press_start_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
+            let is_pointer_in_viewport = pointer_pos.map_or(false, |pos| self.is_in_viewport(pos));
+            self.pointer_state.press_start_in_viewport = is_pointer_in_viewport;
+
+            // Discard previously read position,
+            // otherwise will register outside viewport
+            if !is_pointer_in_viewport {
+               self.pointer_state.viewport_pointer_pos = None;
+            }
+
             return;
         }
 
