@@ -26,9 +26,15 @@ impl Plugin for PanCamPlugin {
 
 // Zoom doesn't work on bevy 0.5 due to: https://github.com/bevyengine/bevy/pull/2015
 fn camera_zoom(
+    editor: Res<Editor>,
     mut query: Query<(&PanCamControls, &mut OrthographicProjection)>,
     mut scroll_events: EventReader<MouseWheel>,
 ) {
+    // Ignore non-viewport interactions
+    if !editor.pointer_state.is_pointer_in_viewport() {
+        return;
+    }
+
     let pixels_per_line = 100.; // Maybe make configurable?
     let scroll = scroll_events
         .read()

@@ -2,6 +2,7 @@
 pub mod editor;
 /// Trait definition for new editor windows
 pub mod editor_window;
+mod editor_inputs;
 
 use std::marker::PhantomData;
 

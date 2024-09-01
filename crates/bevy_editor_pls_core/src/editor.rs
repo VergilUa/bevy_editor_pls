@@ -5,9 +5,9 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
 use bevy_inspector_egui::egui::{Context, Ui};
 use egui_dock::{NodeIndex, SurfaceIndex, TabBarStyle, TabIndex};
-use egui_dock::egui::{PointerButton, Pos2};
+use egui_dock::egui::{PointerButton};
 use indexmap::IndexMap;
-
+use crate::editor_inputs::EditorPointerState;
 use crate::editor_window::{EditorWindow, EditorWindowContext};
 
 #[non_exhaustive]
@@ -39,16 +39,6 @@ pub struct Editor {
     window_states: HashMap<TypeId, EditorWindowState>,
 
     pub pointer_state: EditorPointerState,
-}
-
-/// Current state of the pointer used inside editor window
-#[derive(Default)]
-pub struct EditorPointerState {
-    pub press_active: bool,
-    pub press_start_in_viewport: bool,
-
-    /// Position of the cursor inside the viewport / game view
-    pub viewport_pointer_pos: Option<Pos2>,
 }
 
 impl Editor {
