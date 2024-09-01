@@ -406,7 +406,7 @@ impl Editor {
 
     fn setup_input_state(&mut self, ctx: &Context, internal_state: &EditorInternalState) {
         let is_pointer_pressed = ctx.input(|input| input.pointer.any_pressed());
-        let is_pointer_held = ctx.input(|input| input.pointer.any_pressed());
+        let is_pointer_held = ctx.input(|input| input.pointer.any_down());
 
         self.setup_input_viewport_state(ctx, is_pointer_pressed, is_pointer_held, internal_state);
     }
