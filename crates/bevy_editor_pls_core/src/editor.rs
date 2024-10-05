@@ -113,6 +113,15 @@ impl Editor {
         let local_cursor_pos = (cursor_pos - ui.min_rect().min).to_pos2();
         self.pointer_state.viewport_pointer_pos = Some(local_cursor_pos);
     }
+
+    /// Determines if window of [`T`] currently exists internally
+    pub fn has_window<T>(&self) -> bool
+    where
+        T: EditorWindow,
+    {
+        let type_id = TypeId::of::<T>();
+        self.windows.contains_key(&type_id)
+    }
 }
 
 pub(crate) type UiFn =
