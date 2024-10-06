@@ -244,6 +244,19 @@ impl EditorInternalState {
         false
     }
 
+    /// Determines if floating window of type ['W'] was added prior
+    pub fn has_floating_window_typed(&self, type_id: TypeId) -> bool {
+        let floating_windows = &self.floating_windows;
+
+        for window in floating_windows.iter() {
+            if window.window == type_id {
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// Determines if floating window of type [`W`] was closed during last
     /// redraw / frame
     pub fn closed_floating_window<W: 'static>(&self) -> bool {
